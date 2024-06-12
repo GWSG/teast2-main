@@ -1,0 +1,205 @@
+//伺服器端
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
+const PORT = process.env.PORT || 3000;
+
+let rooms = {};
+
+app.use(express.static('public'));
+
+io.on('connection', (socket) => {
+  console.log('使用者已連線');
+
+  socket.on('createRoom', ({ size, playerName, playerRole }) => {
+    const roomId = Math.random().toString(36).substr(2, 9);
+    const boardSize = size || 2;
+    rooms[roomId] = { players: [], spectators: [], board: generateBoard(boardSize), currentPlayer: 0, scores: {} };
+    socket.join(roomId);
+    const player = { id: socket.id, name: playerName, role: playerRole };
+    if (playerRole === 'participant') {
+      rooms[roomId].players.push(player);
+    } else {
+      rooms[roomId].spectators.push(player);
+    }
+    rooms[roomId].scores[socket.id] = 0;
+    socket.emit('roomCreated', roomId);
+    socket.emit('board', rooms[roomId].board);
+    io.to(roomId).emit('updatePlayers', rooms[roomId].players.concat(rooms[roomId].spectators));
+    io.to(roomId).emit('playerJoined', `${playerName}已進入房間，並將首先選擇`);
+    if (playerRole === 'participant') {
+      io.to(roomId).emit('nextPlayer', player);
+    }
+  });
+
+  socket.on('joinRoom', ({ roomId, playerName, playerRole }) => {
+    if (rooms[roomId]) {
+      const room = rooms[roomId];
+      const playerCount = room.players.length;
+      const spectatorCount = room.spectators.length;
+
+      if (playerRole === 'participant' && playerCount >= 2) {
+        socket.emit('roleFull', '參加者名額已滿');
+        return;
+      }
+      if (playerRole === 'spectator' && spectatorCount >= 2) {
+        socket.emit('roleFull', '觀戰者名額已滿');
+        return;
+      }
+
+      socket.join(roomId);
+      const player = { id: socket.id, name: playerName, role: playerRole };
+      if (playerRole === 'participant') {
+        room.players.push(player);
+      } else {
+        room.spectators.push(player);
+      }
+      rooms[roomId].scores[socket.id] = 0;
+      io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+      socket.emit('board', room.board);
+      io.to(roomId).emit('playerJoined', `${playerName}已進入房間`);
+    } else {
+      socket.emit('error', '找不到房間');
+    }
+  });
+
+  socket.on('flipCard', (roomId, cardIndex) => {
+    if (rooms[roomId]) {
+      const room = rooms[roomId];
+      const player = room.players.find(p => p.id === socket.id);
+
+      if (!player || player.role !== 'participant') {
+        socket.emit('error', '你不能去碰牌');
+        return;
+      }
+
+      if (room.currentPlayer !== room.players.indexOf(player)) {
+        socket.emit('error', '不是你的回合');
+        return;
+      }
+
+      room.flippedCards = room.flippedCards || [];
+
+      if (room.flippedCards.length < 2) {
+        room.flippedCards.push({ playerId: player.id, cardIndex });
+        io.to(roomId).emit('cardFlipped', cardIndex, room.board[cardIndex]);
+
+        if (room.flippedCards.length === 2) {
+          const [firstCard, secondCard] = room.flippedCards;
+          if (room.board[firstCard.cardIndex] === room.board[secondCard.cardIndex]) {
+            room.scores[player.id]++;
+            io.to(roomId).emit('pairFound', firstCard.cardIndex, secondCard.cardIndex, player);
+            room.flippedCards = [];
+            removeCards(room.board, firstCard.cardIndex, secondCard.cardIndex);
+            if (isGameOver(room.board)) {
+              const finalScores = room.players.map(p => ({ name: p.name, score: room.scores[p.id] }));
+              io.to(roomId).emit('gameOver', finalScores);
+            } else {
+              room.currentPlayer = (room.currentPlayer + 1) % room.players.length;
+              io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+            }
+          } else {
+            setTimeout(() => {
+              io.to(roomId).emit('flipBack', firstCard.cardIndex, secondCard.cardIndex);
+              room.flippedCards = [];
+              room.currentPlayer = (room.currentPlayer + 1) % room.players.length;
+              io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+            }, 1000);
+          }
+        }
+      }
+    }
+  });
+
+  socket.on('restartGame', (roomId) => {
+    if (rooms[roomId]) {
+      const room = rooms[roomId];
+      room.board = generateBoard(Math.sqrt(room.board.length));
+      room.currentPlayer = 0;
+      room.scores = {};
+      room.players.forEach(player => {
+        room.scores[player.id] = 0;
+      });
+      io.to(roomId).emit('board', room.board);
+      io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+      io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+    }
+  });
+
+  socket.on('leaveRoom', (roomId) => {
+    if (rooms[roomId]) {
+      const room = rooms[roomId];
+      room.players.concat(room.spectators).forEach(player => {
+        io.to(player.id).emit('roomClosed');
+        io.sockets.sockets.get(player.id).leave(roomId);
+      });
+      delete rooms[roomId];
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('使用者已斷線');
+    for (const roomId in rooms) {
+      const room = rooms[roomId];
+      const index = room.players.findIndex(p => p.id === socket.id);
+      if (index !== -1) {
+        const player = room.players.splice(index, 1)[0];
+        delete room.scores[socket.id];
+        io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+        io.to(roomId).emit('playerJoined', `${player.name}已離開房間`);
+        if (room.players.length === 0 && room.spectators.length === 0) {
+          delete rooms[roomId];
+        }
+        break;
+      }
+      const spectatorIndex = room.spectators.findIndex(s => s.id === socket.id);
+      if (spectatorIndex !== -1) {
+        const spectator = room.spectators.splice(spectatorIndex, 1)[0];
+        delete room.scores[socket.id];
+        io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+        io.to(roomId).emit('playerJoined', `${spectator.name}已離開房間`);
+        if (room.players.length === 0 && room.spectators.length === 0) {
+          delete rooms[roomId];
+        }
+        break;
+      }
+    }
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`伺服器正在執行於端口 ${PORT}`);
+});
+
+function generateBoard(size) {
+  const totalCards = size * size;
+  const maxNumber = 32;
+  const cards = [];
+  for (let i = 1; i <= totalCards / 2; i++) {
+    const value = i % (maxNumber + 1);
+    cards.push(value, value);
+  }
+  return shuffle(cards);
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function removeCards(board, index1, index2) {
+  board[index1] = null;
+  board[index2] = null;
+}
+
+function isGameOver(board) {
+  return board.every(card => card === null);
+}
