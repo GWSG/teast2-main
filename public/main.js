@@ -7,7 +7,11 @@ let startTime = null;
 let endTime = null;
 
 function showRoleSelection(action) {
-  playerName = document.getElementById('player-name').value || '未知玩家';
+  playerName = document.getElementById('player-name').value;
+  if (!playerName) {
+    alert('請輸入你的名字');
+    return;
+  }
   document.getElementById('role-selection').style.display = 'block';
   document.getElementById('role-selection').dataset.action = action;
 }
@@ -121,20 +125,23 @@ socket.on('gameOver', (scores) => {
     if (startTime && !endTime) {
       endTime = new Date();
       const elapsedTime = ((endTime - startTime) / 1000).toFixed(2);
+      socket.emit('askRestart');  // 向伺服器發送遊戲結束事件
       const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n用時: ${elapsedTime} 秒\n是否還要再玩一局?`);
       if (playAgain) {
         resetGame();
         socket.emit('restartGame', roomId);
       } else {
-        socket.emit('leaveRoom', roomId);
+        // 這裡不再退出房間，只是重置遊戲狀態
+        resetGame();
       }
     } else {
       const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n是否還要再玩一局?`);
       if (playAgain) {
         resetGame();
         socket.emit('restartGame', roomId);
-      } else if (playerRole === 'spectator') {
-        socket.emit('leaveRoom', roomId);
+      } else {
+        // 這裡不再退出房間，只是重置遊戲狀態
+        resetGame();
       }
     }
   }, 500); // 確保動畫完成後顯示結束訊息
@@ -184,3 +191,11 @@ function resetGame() {
   endTime = null;
   flippedCards = [];
 }
+
+socket.on('askRestart', () => {
+  const playAgain = confirm('遊戲結束! 是否再來一局？');
+  if (playAgain) {
+    resetGame();
+    socket.emit('restartGame', roomId);
+  }
+});

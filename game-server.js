@@ -1,4 +1,3 @@
-//伺服器端
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -19,7 +18,7 @@ io.on('connection', (socket) => {
   socket.on('createRoom', ({ size, playerName, playerRole }) => {
     const roomId = Math.random().toString(36).substr(2, 9);
     const boardSize = size || 2;
-    rooms[roomId] = { players: [], spectators: [], board: generateBoard(boardSize), currentPlayer: 0, scores: {} };
+    rooms[roomId] = { players: [], spectators: [], board: generateBoard(boardSize), currentPlayer: 0, scores: {}, creator: socket.id };
     socket.join(roomId);
     const player = { id: socket.id, name: playerName, role: playerRole };
     if (playerRole === 'participant') {
@@ -99,6 +98,7 @@ io.on('connection', (socket) => {
             if (isGameOver(room.board)) {
               const finalScores = room.players.map(p => ({ name: p.name, score: room.scores[p.id] }));
               io.to(roomId).emit('gameOver', finalScores);
+              notifyAllPlayers(roomId, 'askRestart');
             } else {
               room.currentPlayer = (room.currentPlayer + 1) % room.players.length;
               io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
@@ -119,15 +119,15 @@ io.on('connection', (socket) => {
   socket.on('restartGame', (roomId) => {
     if (rooms[roomId]) {
       const room = rooms[roomId];
-      room.board = generateBoard(Math.sqrt(room.board.length));
-      room.currentPlayer = 0;
-      room.scores = {};
+      room.board = generateBoard(Math.sqrt(room.board.length)); // 重新生成棋盤
+      room.currentPlayer = 0; // 重置當前玩家
+      room.scores = {}; // 重置分數
       room.players.forEach(player => {
-        room.scores[player.id] = 0;
+        room.scores[player.id] = 0; // 初始化玩家分數
       });
-      io.to(roomId).emit('board', room.board);
-      io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
-      io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+      io.to(roomId).emit('board', room.board); // 發送新的棋盤狀態
+      io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators)); // 更新房間內的玩家列表
+      io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]); // 通知下一個玩家
     }
   });
 
@@ -202,4 +202,13 @@ function removeCards(board, index1, index2) {
 
 function isGameOver(board) {
   return board.every(card => card === null);
+}
+
+function notifyAllPlayers(roomId, event) {
+  const room = rooms[roomId];
+  room.players.concat(room.spectators).forEach(player => {
+    if (player.name) {
+      io.to(player.id).emit(event);
+    }
+  });
 }
