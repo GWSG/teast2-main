@@ -46,6 +46,7 @@ function joinRoom() {
 
 socket.on('roleFull', (message) => {
   document.getElementById('role-selection').style.display = 'none';
+  alert(message);
 });
 
 socket.on('updatePlayers', (players) => {
@@ -117,7 +118,7 @@ socket.on('flipBack', (index1, index2) => {
 });
 
 socket.on('nextPlayer', (nextPlayer) => {
-  // 略去提示
+  console.log(`下一個玩家是: ${nextPlayer.name}`);
 });
 
 socket.on('gameOver', (scores) => {
@@ -125,13 +126,11 @@ socket.on('gameOver', (scores) => {
     if (startTime && !endTime) {
       endTime = new Date();
       const elapsedTime = ((endTime - startTime) / 1000).toFixed(2);
-      socket.emit('askRestart');  // 向伺服器發送遊戲結束事件
       const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n用時: ${elapsedTime} 秒\n是否還要再玩一局?`);
       if (playAgain) {
         resetGame();
         socket.emit('restartGame', roomId);
       } else {
-        // 這裡不再退出房間，只是重置遊戲狀態
         resetGame();
       }
     } else {
@@ -140,7 +139,6 @@ socket.on('gameOver', (scores) => {
         resetGame();
         socket.emit('restartGame', roomId);
       } else {
-        // 這裡不再退出房間，只是重置遊戲狀態
         resetGame();
       }
     }
@@ -154,10 +152,9 @@ socket.on('roomClosed', () => {
 });
 
 socket.on('playerJoined', (message) => {
-  // 略去提示
+  console.log(message);
 });
 
-// 初始化棋盤
 function initializeBoard(board) {
   const boardElement = document.getElementById('board');
   boardElement.innerHTML = '';
