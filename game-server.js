@@ -132,15 +132,22 @@ io.on('connection', (socket) => {
   });
 
   socket.on('leaveRoom', (roomId) => {
-    if (rooms[roomId]) {
-      const room = rooms[roomId];
-      room.players.concat(room.spectators).forEach(player => {
-        io.to(player.id).emit('roomClosed');
-        io.sockets.sockets.get(player.id).leave(roomId);
-      });
-      delete rooms[roomId];
+    const room = rooms[roomId];
+    if (room) {
+      room.players = room.players.filter(player => player.id !== socket.id);
+      room.spectators = room.spectators.filter(spectator => spectator.id !== socket.id);
+      delete room.scores[socket.id];
+  
+      socket.leave(roomId);
+      io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+      io.to(roomId).emit('playerLeft', `${socket.id} 已離開房間`);
+  
+      if (room.players.length === 0 && room.spectators.length === 0) {
+        delete rooms[roomId];
+      }
     }
   });
+  
 
   socket.on('disconnect', () => {
     console.log('使用者已斷線');

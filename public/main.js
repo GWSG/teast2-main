@@ -131,8 +131,8 @@ socket.on('gameOver', (scores) => {
         resetGame();
         socket.emit('restartGame', roomId);
       } else {
-        // 這裡不再退出房間，只是重置遊戲狀態
-        resetGame();
+        // 發送退出房間請求
+        socket.emit('leaveRoom', roomId);
       }
     } else {
       const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n是否還要再玩一局?`);
@@ -140,8 +140,8 @@ socket.on('gameOver', (scores) => {
         resetGame();
         socket.emit('restartGame', roomId);
       } else {
-        // 這裡不再退出房間，只是重置遊戲狀態
-        resetGame();
+        // 發送退出房間請求
+        socket.emit('leaveRoom', roomId);
       }
     }
   }, 500); // 確保動畫完成後顯示結束訊息
@@ -151,10 +151,7 @@ socket.on('roomClosed', () => {
   document.getElementById('game').style.display = 'none';
   document.getElementById('room-id').value = '';
   resetGame();
-});
-
-socket.on('playerJoined', (message) => {
-  // 略去提示
+  alert('你已離開房間');
 });
 
 // 初始化棋盤
@@ -191,11 +188,3 @@ function resetGame() {
   endTime = null;
   flippedCards = [];
 }
-
-socket.on('askRestart', () => {
-  const playAgain = confirm('遊戲結束! 是否再來一局？');
-  if (playAgain) {
-    resetGame();
-    socket.emit('restartGame', roomId);
-  }
-});
