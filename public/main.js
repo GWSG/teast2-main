@@ -29,6 +29,11 @@ function selectRole(role) {
 
 function createRoom() {
   const size = document.getElementById('board-size').value;
+  if (size === '16') {
+    document.querySelector('.rules').style.display = 'none'; // 隱藏遊戲規則
+  } else {
+    document.querySelector('.rules').style.display = 'block'; // 顯示遊戲規則
+  }
   socket.emit('createRoom', { size, playerName, playerRole });
 }
 
@@ -42,8 +47,16 @@ socket.on('roomCreated', (id) => {
 function joinRoom() {
   roomId = document.getElementById('room-id').value;
   socket.emit('joinRoom', { roomId, playerName, playerRole });
-  document.getElementById('game').style.display = 'block';
 }
+
+socket.on('board', (board) => {
+  if (board.length === 256) {
+    document.querySelector('.rules').style.display = 'none'; // 隱藏遊戲規則
+  } else {
+    document.querySelector('.rules').style.display = 'block'; // 顯示遊戲規則
+  }
+  initializeBoard(board);
+});
 
 socket.on('roleFull', (message) => {
   document.getElementById('role-selection').style.display = 'none';
@@ -186,10 +199,6 @@ function initializeBoard(board) {
     boardElement.appendChild(card);
   });
 }
-
-socket.on('board', (board) => {
-  initializeBoard(board);
-});
 
 function checkGameOver() {
   const cards = document.querySelectorAll('.card');

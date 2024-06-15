@@ -205,11 +205,10 @@ server.listen(PORT, () => {
 
 function generateBoard(size) {
   const totalCards = size * size;
-  const maxNumber = 32;
+  const maxNumber = totalCards / 2;
   const cards = [];
-  for (let i = 1; i <= totalCards / 2; i++) {
-    const value = i % (maxNumber + 1);
-    cards.push(value, value);
+  for (let i = 1; i <= maxNumber; i++) {
+    cards.push(i, i);
   }
   return shuffle(cards);
 }
