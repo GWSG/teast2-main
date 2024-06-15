@@ -36,6 +36,7 @@ socket.on('roomCreated', (id) => {
   roomId = id;
   document.getElementById('room-id').value = roomId;
   document.getElementById('game').style.display = 'block';
+  updateNotification(`房間已創建，房間 ID: ${roomId}`);
 });
 
 function joinRoom() {
@@ -57,6 +58,24 @@ socket.on('updatePlayers', (players) => {
     playerItem.textContent = `${player.name} (${player.role === 'spectator' ? '觀戰者' : '參加者'})`;
     playersList.appendChild(playerItem);
   });
+  // 通知目前輪到的玩家
+  socket.emit('getCurrentPlayer', roomId);
+});
+
+socket.on('playerJoined', (message) => {
+  updateNotification(message);
+  // 通知目前輪到的玩家
+  socket.emit('getCurrentPlayer', roomId);
+});
+
+socket.on('playerLeft', (message) => {
+  updateNotification(message);
+  // 通知目前輪到的玩家
+  socket.emit('getCurrentPlayer', roomId);
+});
+
+socket.on('nextPlayer', (nextPlayer) => {
+  updateNotification(`現在輪到 ${nextPlayer.name} 操作`);
 });
 
 function flipCard(index) {
@@ -117,10 +136,6 @@ socket.on('flipBack', (index1, index2) => {
   }, 500);
 });
 
-socket.on('nextPlayer', (nextPlayer) => {
-  console.log(`下一個玩家是: ${nextPlayer.name}`);
-});
-
 socket.on('gameOver', (scores) => {
   setTimeout(() => {
     if (startTime && !endTime) {
@@ -154,10 +169,6 @@ socket.on('gameOver', (scores) => {
 socket.on('roomClosed', () => {
   resetToInitialState();
   alert('你已離開房間');
-});
-
-socket.on('playerJoined', (message) => {
-  console.log(message); // 記錄玩家加入訊息
 });
 
 function initializeBoard(board) {
@@ -203,6 +214,7 @@ function resetToInitialState() {
   document.getElementById('board-size').value = '2'; // 默認值
   clearBoard();
   clearPlayerList();
+  clearNotifications();
 }
 
 function clearBoard() {
@@ -213,4 +225,17 @@ function clearBoard() {
 function clearPlayerList() {
   const playersList = document.getElementById('players');
   playersList.innerHTML = '';
+}
+
+function clearNotifications() {
+  const notificationsElement = document.getElementById('notifications');
+  notificationsElement.innerHTML = '';
+}
+
+function updateNotification(message) {
+  const notificationsElement = document.getElementById('notifications');
+  notificationsElement.innerHTML = ''; // 清空通知欄
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  notificationsElement.appendChild(notification);
 }

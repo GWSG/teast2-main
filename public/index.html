@@ -20,10 +20,10 @@
           <option value="6">6x6</option>
           <option value="8">8x8</option>
         </select>
-        <button class="btn" onclick="showRoleSelection('create')">創建房間</button>
+        <button class="btn create" onclick="showRoleSelection('create')">創建房間</button>
         <div class="join-room">
           <input id="room-id" placeholder="輸入房間 ID" />
-          <button class="btn" onclick="showRoleSelection('join')">加入房間</button>
+          <button class="btn join" onclick="showRoleSelection('join')">加入房間</button>
         </div>
       </div>
       <div id="role-selection" class="hidden">
@@ -34,6 +34,7 @@
       <div id="game" class="hidden">
         <div id="board"></div>
         <ul id="players"></ul>
+        <div id="notifications"></div>
       </div>
     </div>
     <div class="rules">

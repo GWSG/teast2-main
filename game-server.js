@@ -30,9 +30,9 @@ io.on('connection', (socket) => {
     socket.emit('roomCreated', roomId);
     socket.emit('board', rooms[roomId].board);
     io.to(roomId).emit('updatePlayers', rooms[roomId].players.concat(rooms[roomId].spectators));
-    io.to(roomId).emit('playerJoined', `${playerName}已進入房間，並將首先選擇`);
+    io.to(roomId).emit('playerJoined', `${playerName}已進入房間`);
     if (playerRole === 'participant') {
-      io.to(roomId).emit('nextPlayer', player);
+      io.to(roomId).emit('nextPlayer', rooms[roomId].players[rooms[roomId].currentPlayer]);
     }
   });
 
@@ -62,6 +62,7 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
       socket.emit('board', room.board);
       io.to(roomId).emit('playerJoined', `${playerName}已進入房間`);
+      io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
     } else {
       socket.emit('error', '找不到房間');
     }
@@ -98,7 +99,6 @@ io.on('connection', (socket) => {
             if (isGameOver(room.board)) {
               const finalScores = room.players.map(p => ({ name: p.name, score: room.scores[p.id] }));
               io.to(roomId).emit('gameOver', finalScores);
-              notifyAllPlayers(roomId, 'askRestart');
             } else {
               room.currentPlayer = (room.currentPlayer + 1) % room.players.length;
               io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
@@ -134,11 +134,25 @@ io.on('connection', (socket) => {
   socket.on('leaveRoom', (roomId) => {
     if (rooms[roomId]) {
       const room = rooms[roomId];
-      room.players.concat(room.spectators).forEach(player => {
-        io.to(player.id).emit('roomClosed');
-        io.sockets.sockets.get(player.id).leave(roomId);
-      });
-      delete rooms[roomId];
+      room.players = room.players.filter(player => player.id !== socket.id);
+      room.spectators = room.spectators.filter(spectator => spectator.id !== socket.id);
+      delete room.scores[socket.id];
+
+      // 通知其他玩家
+      io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+      io.to(roomId).emit('playerLeft', `${socket.id} 已離開房間`);
+      
+      // 讓離開的玩家離開房間
+      socket.leave(roomId);
+      socket.emit('roomClosed');
+
+      // 如果房間沒有玩家，刪除房間
+      if (room.players.length === 0 && room.spectators.length === 0) {
+        delete rooms[roomId];
+      } else {
+        // 通知目前輪到的玩家
+        io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+      }
     }
   });
 
@@ -151,9 +165,12 @@ io.on('connection', (socket) => {
         const player = room.players.splice(index, 1)[0];
         delete room.scores[socket.id];
         io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
-        io.to(roomId).emit('playerJoined', `${player.name}已離開房間`);
+        io.to(roomId).emit('playerLeft', `${player.name}已離開房間`);
         if (room.players.length === 0 && room.spectators.length === 0) {
           delete rooms[roomId];
+        } else {
+          // 通知目前輪到的玩家
+          io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
         }
         break;
       }
@@ -162,12 +179,22 @@ io.on('connection', (socket) => {
         const spectator = room.spectators.splice(spectatorIndex, 1)[0];
         delete room.scores[socket.id];
         io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
-        io.to(roomId).emit('playerJoined', `${spectator.name}已離開房間`);
+        io.to(roomId).emit('playerLeft', `${spectator.name}已離開房間`);
         if (room.players.length === 0 && room.spectators.length === 0) {
           delete rooms[roomId];
+        } else {
+          // 通知目前輪到的玩家
+          io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
         }
         break;
       }
+    }
+  });
+
+  socket.on('getCurrentPlayer', (roomId) => {
+    if (rooms[roomId]) {
+      const room = rooms[roomId];
+      io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
     }
   });
 });
@@ -202,13 +229,4 @@ function removeCards(board, index1, index2) {
 
 function isGameOver(board) {
   return board.every(card => card === null);
-}
-
-function notifyAllPlayers(roomId, event) {
-  const room = rooms[roomId];
-  room.players.concat(room.spectators).forEach(player => {
-    if (player.name) {
-      io.to(player.id).emit(event);
-    }
-  });
 }
