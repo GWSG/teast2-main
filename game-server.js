@@ -71,23 +71,23 @@ io.on('connection', (socket) => {
     if (rooms[roomId]) {
       const room = rooms[roomId];
       const player = room.players.find(p => p.id === socket.id);
-  
+
       if (!player || player.role !== 'participant') {
         socket.emit('error', '你不能去碰牌');
         return;
       }
-  
+
       if (room.currentPlayer !== room.players.indexOf(player)) {
         socket.emit('error', '不是你的回合');
         return;
       }
-  
+
       room.flippedCards = room.flippedCards || [];
-  
+
       if (room.flippedCards.length < 2) {
         room.flippedCards.push({ playerId: player.id, cardIndex });
         io.to(roomId).emit('cardFlipped', cardIndex, room.board[cardIndex]);
-  
+
         if (room.flippedCards.length === 2) {
           const [firstCard, secondCard] = room.flippedCards;
           if (room.board[firstCard.cardIndex] === room.board[secondCard.cardIndex]) {
@@ -115,7 +115,6 @@ io.on('connection', (socket) => {
       }
     }
   });
-  
 
   socket.on('restartGame', (roomId) => {
     if (rooms[roomId]) {
@@ -133,22 +132,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('leaveRoom', (roomId) => {
-    const room = rooms[roomId];
-    if (room) {
-      room.players = room.players.filter(player => player.id !== socket.id);
-      room.spectators = room.spectators.filter(spectator => spectator.id !== socket.id);
-      delete room.scores[socket.id];
-  
-      socket.leave(roomId);
-      io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
-      io.to(roomId).emit('playerLeft', `${socket.id} 已離開房間`);
-  
-      if (room.players.length === 0 && room.spectators.length === 0) {
-        delete rooms[roomId];
-      }
+    if (rooms[roomId]) {
+      const room = rooms[roomId];
+      room.players.concat(room.spectators).forEach(player => {
+        io.to(player.id).emit('roomClosed');
+        io.sockets.sockets.get(player.id).leave(roomId);
+      });
+      delete rooms[roomId];
     }
   });
-  
 
   socket.on('disconnect', () => {
     console.log('使用者已斷線');
@@ -167,7 +159,7 @@ io.on('connection', (socket) => {
       }
       const spectatorIndex = room.spectators.findIndex(s => s.id === socket.id);
       if (spectatorIndex !== -1) {
-        const spectator = room.spectators.splice(spectator12Index, 1)[0];
+        const spectator = room.spectators.splice(spectatorIndex, 1)[0];
         delete room.scores[socket.id];
         io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
         io.to(roomId).emit('playerJoined', `${spectator.name}已離開房間`);
@@ -216,7 +208,6 @@ function notifyAllPlayers(roomId, event) {
   const room = rooms[roomId];
   room.players.concat(room.spectators).forEach(player => {
     if (player.name) {
-      console.log(`通知玩家: ${player.name}, ID: ${player.id}`); // 調試輸出
       io.to(player.id).emit(event);
     }
   });

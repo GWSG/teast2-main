@@ -133,6 +133,8 @@ socket.on('gameOver', (scores) => {
       } else {
         // 發送退出房間請求
         socket.emit('leaveRoom', roomId);
+        resetToInitialState();
+        alert('你已離開房間');
       }
     } else {
       const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n是否還要再玩一局?`);
@@ -142,15 +144,15 @@ socket.on('gameOver', (scores) => {
       } else {
         // 發送退出房間請求
         socket.emit('leaveRoom', roomId);
+        resetToInitialState();
+        alert('你已離開房間');
       }
     }
   }, 500); // 確保動畫完成後顯示結束訊息
 });
 
 socket.on('roomClosed', () => {
-  document.getElementById('game').style.display = 'none';
-  document.getElementById('room-id').value = '';
-  resetGame();
+  resetToInitialState();
   alert('你已離開房間');
 });
 
@@ -190,4 +192,25 @@ function resetGame() {
   startTime = null;
   endTime = null;
   flippedCards = [];
+}
+
+function resetToInitialState() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('room-id').value = '';
+  document.getElementById('role-selection').style.display = 'none';
+  document.querySelector('.settings').style.display = 'block';
+  document.getElementById('player-name').value = '';
+  document.getElementById('board-size').value = '2'; // 默認值
+  clearBoard();
+  clearPlayerList();
+}
+
+function clearBoard() {
+  const boardElement = document.getElementById('board');
+  boardElement.innerHTML = '';
+}
+
+function clearPlayerList() {
+  const playersList = document.getElementById('players');
+  playersList.innerHTML = '';
 }
