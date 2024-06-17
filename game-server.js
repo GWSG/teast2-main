@@ -121,13 +121,53 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('restartGame', (roomId) => {
+        if (rooms[roomId]) {
+            const room = rooms[roomId];
+            room.board = generateBoard(Math.sqrt(room.board.length)); // 重新生成棋盤
+            room.currentPlayer = 0; // 重置當前玩家
+            room.scores = {}; // 重置分數
+            room.players.forEach(player => {
+                room.scores[player.id] = 0; // 初始化玩家分數
+            });
+            io.to(roomId).emit('board', room.board); // 發送新的棋盤狀態
+            io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators)); // 更新房間內的玩家列表
+            io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]); // 通知下一個玩家
+        }
+    });
+
+    socket.on('leaveRoom', (roomId) => {
+        if (rooms[roomId]) {
+            const room = rooms[roomId];
+            room.players = room.players.filter(player => player.id !== socket.id);
+            room.spectators = room.spectators.filter(spectator => spectator.id !== socket.id);
+            delete room.scores[socket.id];
+
+            // 通知其他玩家
+            io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+            io.to(roomId).emit('playerLeft', `${socket.id} 已離開房間`);
+            
+            // 讓離開的玩家離開房間
+            socket.leave(roomId);
+            socket.emit('roomClosed');
+
+            // 如果房間沒有玩家，刪除房間
+            if (room.players.length === 0 && room.spectators.length === 0) {
+                delete rooms[roomId];
+            } else {
+                // 通知目前輪到的玩家
+                io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+            }
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('使用者已斷線');
         for (const roomId in rooms) {
             const room = rooms[roomId];
-            const playerIndex = room.players.findIndex(p => p.id === socket.id);
-            if (playerIndex !== -1) {
-                const player = room.players.splice(playerIndex, 1)[0];
+            const index = room.players.findIndex(p => p.id === socket.id);
+            if (index !== -1) {
+                const player = room.players.splice(index, 1)[0];
                 delete room.scores[socket.id];
                 io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
                 io.to(roomId).emit('playerLeft', `${player.name}已離開房間`);
@@ -154,42 +194,41 @@ io.on('connection', (socket) => {
         }
     });
 
-
-  socket.on('getCurrentPlayer', (roomId) => {
-    if (rooms[roomId]) {
-      const room = rooms[roomId];
-      io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
-    }
-  });
+    socket.on('getCurrentPlayer', (roomId) => {
+        if (rooms[roomId]) {
+            const room = rooms[roomId];
+            io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+        }
+    });
 });
 
 server.listen(PORT, () => {
-  console.log(`伺服器正在執行於端口 ${PORT}`);
+    console.log(`伺服器正在執行於端口 ${PORT}`);
 });
 
 function generateBoard(size) {
-  const totalCards = size * size;
-  const maxNumber = totalCards / 2;
-  const cards = [];
-  for (let i = 1; i <= maxNumber; i++) {
-      cards.push(i, i);
-  }
-  return shuffle(cards);
+    const totalCards = size * size;
+    const maxNumber = totalCards / 2;
+    const cards = [];
+    for (let i = 1; i <= maxNumber; i++) {
+        cards.push(i, i);
+    }
+    return shuffle(cards);
 }
 
 function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
 }
 
 function removeCards(board, index1, index2) {
-  board[index1] = null;
-  board[index2] = null;
+    board[index1] = null;
+    board[index2] = null;
 }
 
 function isGameOver(board) {
-  return board.every(card => card === null);
+    return board.every(card => card === null);
 }

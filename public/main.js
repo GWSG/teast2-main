@@ -88,161 +88,160 @@ socket.on('nextPlayer', (nextPlayer) => {
     updateNotification(`現在輪到 ${nextPlayer.name} 操作`);
 });
 
+function initializeBoard(board) {
+    const boardElement = document.getElementById('board');
+    boardElement.innerHTML = '';
+    const boardSize = Math.sqrt(board.length);
+    boardElement.style.gridTemplateColumns = `repeat(${boardSize}, 70px)`;
+
+    board.forEach((value, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = `card-${index}`;
+        card.dataset.value = value;
+        card.onclick = () => flipCard(index);
+        boardElement.appendChild(card);
+    });
+}
+
 function flipCard(index) {
-  if (playerRole === 'spectator') {
-    alert('你不能去碰牌');
-    return;
-  }
-  if (!startTime) {
-    startTime = new Date();
-  }
-  const card = document.getElementById(`card-${index}`);
-  if (card.classList.contains('flipped') || card.classList.contains('removed') || flippedCards.length === 2) {
-    return;
-  }
-  socket.emit('flipCard', roomId, index);
+    if (playerRole === 'spectator') {
+        alert('你不能去碰牌');
+        return;
+    }
+    if (!startTime) {
+        startTime = new Date();
+    }
+    const card = document.getElementById(`card-${index}`);
+    if (card.classList.contains('flipped') || card.classList.contains('removed') || flippedCards.length === 2) {
+        return;
+    }
+    socket.emit('flipCard', roomId, index);
 }
 
 socket.on('cardFlipped', (index, value) => {
-  const card = document.getElementById(`card-${index}`);
-  card.classList.add('flipped');
-  card.textContent = value;
-  flippedCards.push({ index, value });
+    const card = document.getElementById(`card-${index}`);
+    card.classList.add('flipped');
+    card.textContent = value;
+    flippedCards.push({ index, value });
 
-  if (flippedCards.length === 2) {
-    if (flippedCards[0].value === flippedCards[1].value) {
-      setTimeout(() => {
-        socket.emit('pairFound', roomId, flippedCards[0].index, flippedCards[1].index);
-        flippedCards = [];
-        checkGameOver();
-      }, 500); // 延遲以確保動畫完成
-    } else {
-      setTimeout(() => {
-        socket.emit('flipBack', roomId, flippedCards[0].index, flippedCards[1].index);
-        flippedCards = [];
-        socket.emit('nextPlayer', roomId);
-      }, 500); // 延遲以確保動畫完成
+    if (flippedCards.length === 2) {
+        if (flippedCards[0].value === flippedCards[1].value) {
+            setTimeout(() => {
+                socket.emit('pairFound', roomId, flippedCards[0].index, flippedCards[1].index);
+                flippedCards = [];
+                checkGameOver();
+            }, 500); // 延遲以確保動畫完成
+        } else {
+            setTimeout(() => {
+                socket.emit('flipBack', roomId, flippedCards[0].index, flippedCards[1].index);
+                flippedCards = [];
+                socket.emit('nextPlayer', roomId);
+            }, 500); // 延遲以確保動畫完成
+        }
     }
-  }
 });
 
 socket.on('pairFound', (index1, index2) => {
-  const card1 = document.getElementById(`card-${index1}`);
-  const card2 = document.getElementById(`card-${index2}`);
-  card1.classList.add('matched');
-  card2.classList.add('matched');
-  checkGameOver();
+    const card1 = document.getElementById(`card-${index1}`);
+    const card2 = document.getElementById(`card-${index2}`);
+    card1.classList.add('matched');
+    card2.classList.add('matched');
+    checkGameOver();
 });
 
 socket.on('flipBack', (index1, index2) => {
-  const card1 = document.getElementById(`card-${index1}`);
-  const card2 = document.getElementById(`card-${index2}`);
-  setTimeout(() => {
-    card1.classList.remove('flipped');
-    card1.textContent = '';
-    card2.classList.remove('flipped');
-    card2.textContent = '';
-    socket.emit('nextPlayer', roomId);
-  }, 500);
+    const card1 = document.getElementById(`card-${index1}`);
+    const card2 = document.getElementById(`card-${index2}`);
+    setTimeout(() => {
+        card1.classList.remove('flipped');
+        card1.textContent = '';
+        card2.classList.remove('flipped');
+        card2.textContent = '';
+        socket.emit('nextPlayer', roomId);
+    }, 500);
 });
 
 socket.on('gameOver', (scores) => {
-  setTimeout(() => {
-    if (startTime && !endTime) {
-      endTime = new Date();
-      const elapsedTime = ((endTime - startTime) / 1000).toFixed(2);
-      const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n用時: ${elapsedTime} 秒\n是否還要再玩一局?`);
-      if (playAgain) {
-        resetGame();
-        socket.emit('restartGame', roomId);
-      } else {
-        // 發送退出房間請求
-        socket.emit('leaveRoom', roomId);
-        resetToInitialState();
-        alert('你已離開房間');
-      }
-    } else {
-      const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n是否還要再玩一局?`);
-      if (playAgain) {
-        resetGame();
-        socket.emit('restartGame', roomId);
-      } else {
-        // 發送退出房間請求
-        socket.emit('leaveRoom', roomId);
-        resetToInitialState();
-        alert('你已離開房間');
-      }
-    }
-  }, 500); // 確保動畫完成後顯示結束訊息
+    setTimeout(() => {
+        if (startTime && !endTime) {
+            endTime = new Date();
+            const elapsedTime = ((endTime - startTime) / 1000).toFixed(2);
+            const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n用時: ${elapsedTime} 秒\n是否還要再玩一局?`);
+            if (playAgain) {
+                resetGame();
+                socket.emit('restartGame', roomId);
+            } else {
+                // 發送退出房間請求
+                socket.emit('leaveRoom', roomId);
+                resetToInitialState();
+                alert('你已離開房間');
+            }
+        } else {
+            const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n是否還要再玩一局?`);
+            if (playAgain) {
+                resetGame();
+                socket.emit('restartGame', roomId);
+            } else {
+                // 發送退出房間請求
+                socket.emit('leaveRoom', roomId);
+                resetToInitialState();
+                alert('你已離開房間');
+            }
+        }
+    }, 500); // 確保動畫完成後顯示結束訊息
 });
 
 socket.on('roomClosed', () => {
-  resetToInitialState();
-  alert('你已離開房間');
+    resetToInitialState();
+    alert('你已離開房間');
 });
 
-function initializeBoard(board) {
-  const boardElement = document.getElementById('board');
-  boardElement.innerHTML = '';
-  const boardSize = Math.sqrt(board.length);
-  boardElement.style.gridTemplateColumns = `repeat(${boardSize}, 70px)`;
-
-  board.forEach((value, index) => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.id = `card-${index}`;
-      card.dataset.value = value;
-      card.onclick = () => flipCard(index);
-      boardElement.appendChild(card);
-  });
-}
-
-
 function checkGameOver() {
-  const cards = document.querySelectorAll('.card');
-  const allMatched = Array.from(cards).every(card => card.classList.contains('matched'));
-  if (allMatched) {
-    socket.emit('gameOver', roomId);
-  }
+    const cards = document.querySelectorAll('.card');
+    const allMatched = Array.from(cards).every(card => card.classList.contains('matched'));
+    if (allMatched) {
+        socket.emit('gameOver', roomId);
+    }
 }
 
 function resetGame() {
-  startTime = null;
-  endTime = null;
-  flippedCards = [];
+    startTime = null;
+    endTime = null;
+    flippedCards = [];
 }
 
 function resetToInitialState() {
-  document.getElementById('game').style.display = 'none';
-  document.getElementById('room-id').value = '';
-  document.getElementById('role-selection').style.display = 'none';
-  document.querySelector('.settings').style.display = 'block';
-  document.getElementById('player-name').value = '';
-  document.getElementById('board-size').value = '2'; // 默認值
-  clearBoard();
-  clearPlayerList();
-  clearNotifications();
+    document.getElementById('game').style.display = 'none';
+    document.getElementById('room-id').value = '';
+    document.getElementById('role-selection').style.display = 'none';
+    document.querySelector('.settings').style.display = 'block';
+    document.getElementById('player-name').value = '';
+    document.getElementById('board-size').value = '2'; // 默認值
+    clearBoard();
+    clearPlayerList();
+    clearNotifications();
 }
 
 function clearBoard() {
-  const boardElement = document.getElementById('board');
-  boardElement.innerHTML = '';
+    const boardElement = document.getElementById('board');
+    boardElement.innerHTML = '';
 }
 
 function clearPlayerList() {
-  const playersList = document.getElementById('players');
-  playersList.innerHTML = '';
+    const playersList = document.getElementById('players');
+    playersList.innerHTML = '';
 }
 
 function clearNotifications() {
-  const notificationsElement = document.getElementById('notifications');
-  notificationsElement.innerHTML = '';
+    const notificationsElement = document.getElementById('notifications');
+    notificationsElement.innerHTML = '';
 }
 
 function updateNotification(message) {
-  const notificationsElement = document.getElementById('notifications');
-  notificationsElement.innerHTML = ''; // 清空通知欄
-  const notification = document.createElement('div');
-  notification.textContent = message;
-  notificationsElement.appendChild(notification);
+    const notificationsElement = document.getElementById('notifications');
+    notificationsElement.innerHTML = ''; // 清空通知欄
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notificationsElement.appendChild(notification);
 }
