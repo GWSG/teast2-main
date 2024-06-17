@@ -196,6 +196,14 @@ io.on('connection', (socket) => {
             io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
         }
     });
+
+    socket.on('sendMessage', ({ roomId, message }) => {
+        const player = rooms[roomId].players.find(p => p.id === socket.id) || rooms[roomId].spectators.find(s => s.id === socket.id);
+        if (player) {
+            console.log(`收到來自 ${player.name} 的訊息: ${message} (房間ID: ${roomId})`);
+            io.to(roomId).emit('receiveMessage', { name: player.name, message });
+        }
+    });
 });
 
 server.listen(PORT, () => {

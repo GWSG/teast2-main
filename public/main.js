@@ -94,6 +94,14 @@ socket.on('nextPlayer', (nextPlayer) => {
     updateNotification(`現在輪到 ${nextPlayer.name} 操作`);
 });
 
+socket.on('receiveMessage', ({ name, message }) => {
+    console.log(`接收到訊息: ${name}: ${message}`);
+    const chatElement = document.getElementById('chat');
+    const chatMessage = document.createElement('div');
+    chatMessage.textContent = `${name}: ${message}`;
+    chatElement.appendChild(chatMessage);
+});
+
 function initializeBoard(board) {
     const boardElement = document.getElementById('board');
     boardElement.innerHTML = '';
@@ -227,6 +235,7 @@ function resetToInitialState() {
     clearBoard();
     clearPlayerList();
     clearNotifications();
+    clearChat();
 }
 
 function clearBoard() {
@@ -244,6 +253,11 @@ function clearNotifications() {
     notificationsElement.innerHTML = '';
 }
 
+function clearChat() {
+    const chatElement = document.getElementById('chat');
+    chatElement.innerHTML = '';
+}
+
 function updateNotification(message) {
     const notificationsElement = document.getElementById('notifications');
     notificationsElement.innerHTML = ''; // 清空通知欄
@@ -251,3 +265,22 @@ function updateNotification(message) {
     notification.textContent = message;
     notificationsElement.appendChild(notification);
 }
+
+function sendMessage() {
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value;
+    if (message) {
+        console.log(`發送訊息: 房間ID: ${roomId}, 訊息: ${message}`);
+        socket.emit('sendMessage', { roomId, message });
+        messageInput.value = '';
+    }
+}
+
+// 確保只註冊一次事件處理器
+socket.off('receiveMessage').on('receiveMessage', ({ name, message }) => {
+    console.log(`接收到訊息: ${name}: ${message}`);
+    const chatElement = document.getElementById('chat');
+    const chatMessage = document.createElement('div');
+    chatMessage.textContent = `${name}: ${message}`;
+    chatElement.appendChild(chatMessage);
+});
