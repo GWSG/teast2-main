@@ -1,88 +1,56 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <!-- 設置文檔的字符編碼為UTF-8 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- 設置視口的寬度為設備寬度，初始縮放比例為1 -->
-  <title>雙雙對對？記憶配對遊戲</title>
-  <!-- 設置文檔標題 -->
-  <link rel="stylesheet" href="styles.css">
-  <!-- 連接外部樣式表 -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙雙對對？記憶配對遊戲</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1 class="title">雙雙對對？記憶配對</h1>
-  <!-- 主標題 -->
-  <div class="container">
-    <!-- 主容器 -->
-    <div class="main-content">
-      <!-- 主內容區域 -->
-      <div class="settings">
-        <!-- 設置區域 -->
-        <label for="player-name">玩家名字:</label>
-        <!-- 玩家名字標籤 -->
-        <input id="player-name" placeholder="輸入你的名字" />
-        <!-- 玩家名字輸入框 -->
-        <label for="board-size">選擇棋盤大小:</label>
-        <!-- 棋盤大小選擇標籤 -->
-        <select id="board-size">
-          <!-- 棋盤大小選擇框 -->
-          <option value="2">2x2</option>
-          <option value="4">4x4</option>
-          <option value="6">6x6</option>
-          <option value="8">8x8</option>
-          <option value="16">16x16</option> 
-          <!-- 不同大小的棋盤選項 -->
-        </select>
-        <button class="btn create" onclick="showRoleSelection('create')">創建房間</button>
-        <!-- 創建房間按鈕，點擊後調用showRoleSelection函數 -->
-        <div class="join-room">
-          <!-- 加入房間區域 -->
-          <input id="room-id" placeholder="輸入房間 ID" />
-          <!-- 房間ID輸入框 -->
-          <button class="btn join" onclick="showRoleSelection('join')">加入房間</button>
-          <!-- 加入房間按鈕，點擊後調用showRoleSelection函數 -->
+    <h1 class="title">雙雙對對？記憶配對</h1>
+    <div class="container">
+        <div class="main-content">
+            <div class="settings">
+                <label for="player-name">玩家名字:</label>
+                <input id="player-name" placeholder="輸入你的名字" />
+                <label for="board-size">選擇棋盤大小:</label>
+                <select id="board-size">
+                    <option value="2">2x2</option>
+                    <option value="4">4x4</option>
+                    <option value="6">6x6</option>
+                    <option value="8">8x8</option>
+                    <option value="16">16x16</option>
+                </select>
+                <button class="btn create" onclick="showRoleSelection('create')">創建房間</button>
+                <div class="join-room">
+                    <input id="room-id" placeholder="輸入房間 ID" />
+                    <button class="btn join" onclick="showRoleSelection('join')">加入房間</button>
+                </div>
+            </div>
+            <div id="role-selection" class="hidden">
+                <label>選擇角色:</label>
+                <button class="btn" onclick="selectRole('participant')">參加者</button>
+                <button class="btn" onclick="selectRole('spectator')">觀戰者</button>
+            </div>
+            <div id="game" class="hidden">
+                <div id="board"></div>
+                <ul id="players"></ul>
+                <div id="notifications"></div>
+                <div id="chat"></div>
+                <input id="message-input" placeholder="輸入訊息" />
+                <button class="btn" onclick="sendMessage()">發送</button>
+            </div>
         </div>
-      </div>
-      <div id="role-selection" class="hidden">
-        <!-- 角色選擇區域，初始為隱藏 -->
-        <label>選擇角色:</label>
-        <!-- 角色選擇標籤 -->
-        <button class="btn" onclick="selectRole('participant')">參加者</button>
-        <!-- 選擇參加者角色按鈕，點擊後調用selectRole函數 -->
-        <button class="btn" onclick="selectRole('spectator')">觀戰者</button>
-        <!-- 選擇觀戰者角色按鈕，點擊後調用selectRole函數 -->
-      </div>
-      <div id="game" class="hidden">
-        <!-- 遊戲區域，初始為隱藏 -->
-        <div id="board"></div>
-        <!-- 棋盤區域 -->
-        <ul id="players"></ul>
-        <!-- 玩家列表 -->
-        <div id="notifications"></div>
-        <!-- 通知欄 -->
-      </div>
+        <div class="rules">
+            <h2>遊戲規則</h2>
+            <p>1. 玩家需要選擇一個格子，然後記住它的位置和數字。</p>
+            <p>2. 再選擇另一個格子，如果兩個格子的數字相同，這兩個格子就配對成功。</p>
+            <p>3. 如果兩個格子的數字不同，則需要記住它們的位置，並在下一次選擇時再次嘗試。</p>
+            <p>4. 當所有的格子都被成功配對時，遊戲結束。</p>
+            <p>5. 不用想玩家名字，只要選擇好想要的棋盤大小後，就能直接開始遊戲了。</p>
+        </div>
     </div>
-    <div class="rules">
-      <!-- 遊戲規則區域 -->
-      <h2>遊戲規則</h2>
-      <!-- 規則標題 -->
-      <p>1. 玩家需要選擇一個格子，然後記住它的位置和數字。</p>
-      <!-- 規則說明1 -->
-      <p>2. 再選擇另一個格子，如果兩個格子的數字相同，這兩個格子就配對成功。</p>
-      <!-- 規則說明2 -->
-      <p>3. 如果兩個格子的數字不同，則需要記住它們的位置，並在下一次選擇時再次嘗試。</p>
-      <!-- 規則說明3 -->
-      <p>4. 當所有的格子都被成功配對時，遊戲結束。</p>
-      <!-- 規則說明4 -->
-      <p>5. 不用想玩家名字，只要選擇好想要的棋盤大小後，就能直接開始遊戲了</p>
-      <!-- 規則說明5 -->
-    </div>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <!-- 連接Socket.IO庫 -->
-  <script src="main.js"></script>
-  <!-- 連接主要的JavaScript文件 -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
