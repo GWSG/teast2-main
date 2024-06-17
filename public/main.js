@@ -7,88 +7,85 @@ let startTime = null;
 let endTime = null;
 
 function showRoleSelection(action) {
-  playerName = document.getElementById('player-name').value;
-  if (!playerName) {
-    alert('請輸入你的名字');
-    return;
-  }
-  document.getElementById('role-selection').style.display = 'block';
-  document.getElementById('role-selection').dataset.action = action;
+    playerName = document.getElementById('player-name').value;
+    if (!playerName) {
+        alert('請輸入你的名字');
+        return;
+    }
+    document.getElementById('role-selection').style.display = 'block';
+    document.getElementById('role-selection').dataset.action = action;
 }
 
 function selectRole(role) {
-  playerRole = role;
-  document.getElementById('role-selection').style.display = 'none';
-  const action = document.getElementById('role-selection').dataset.action;
-  if (action === 'create') {
-    createRoom();
-  } else {
-    joinRoom();
-  }
+    playerRole = role;
+    document.getElementById('role-selection').style.display = 'none';
+    const action = document.getElementById('role-selection').dataset.action;
+    if (action === 'create') {
+        createRoom();
+    } else {
+        joinRoom();
+    }
 }
 
 function createRoom() {
-  const size = document.getElementById('board-size').value;
-  if (size === '16') {
-    document.querySelector('.rules').style.display = 'none'; // 隱藏遊戲規則
-  } else {
-    document.querySelector('.rules').style.display = 'block'; // 顯示遊戲規則
-  }
-  socket.emit('createRoom', { size, playerName, playerRole });
+    const size = document.getElementById('board-size').value;
+    if (size === '16') {
+        document.querySelector('.rules').style.display = 'none'; // 隱藏遊戲規則
+    } else {
+        document.querySelector('.rules').style.display = 'block'; // 顯示遊戲規則
+    }
+    socket.emit('createRoom', { size, playerName, playerRole });
 }
 
 socket.on('roomCreated', (id) => {
-  roomId = id;
-  document.getElementById('room-id').value = roomId;
-  document.getElementById('game').style.display = 'block';
-  updateNotification(`房間已創建，房間 ID: ${roomId}`);
+    roomId = id;
+    document.getElementById('room-id').value = roomId;
+    document.getElementById('game').style.display = 'block';
+    updateNotification(`房間已創建，房間 ID: ${roomId}`);
 });
 
 function joinRoom() {
-  roomId = document.getElementById('room-id').value;
-  socket.emit('joinRoom', { roomId, playerName, playerRole });
+    roomId = document.getElementById('room-id').value;
+    playerName = document.getElementById('player-name').value;
+    if (!roomId || !playerName) {
+        alert('請輸入房間 ID 和玩家名字');
+        return;
+    }
+    const playerRole = 'participant'; // 或 'spectator'
+    socket.emit('joinRoom', { roomId, playerName, playerRole });
 }
 
 socket.on('board', (board) => {
-  if (board.length === 256) {
-    document.querySelector('.rules').style.display = 'none'; // 隱藏遊戲規則
-  } else {
-    document.querySelector('.rules').style.display = 'block'; // 顯示遊戲規則
-  }
-  initializeBoard(board);
-});
-
-socket.on('roleFull', (message) => {
-  document.getElementById('role-selection').style.display = 'none';
-  alert(message);
+    console.log('Board received:', board);
+    if (board.length === 256) {
+        document.querySelector('.rules').style.display = 'none';
+    } else {
+        document.querySelector('.rules').style.display = 'block';
+    }
+    initializeBoard(board);
+    document.getElementById('game').style.display = 'block'; // 顯示遊戲區域
 });
 
 socket.on('updatePlayers', (players) => {
-  const playersList = document.getElementById('players');
-  playersList.innerHTML = '';
-  players.forEach((player) => {
-    const playerItem = document.createElement('li');
-    playerItem.textContent = `${player.name} (${player.role === 'spectator' ? '觀戰者' : '參加者'})`;
-    playersList.appendChild(playerItem);
-  });
-  // 通知目前輪到的玩家
-  socket.emit('getCurrentPlayer', roomId);
+    console.log('Players updated:', players);
+    const playersList = document.getElementById('players');
+    playersList.innerHTML = '';
+    players.forEach((player) => {
+        const playerItem = document.createElement('li');
+        playerItem.textContent = `${player.name} (${player.role === 'spectator' ? '觀戰者' : '參加者'})`;
+        playersList.appendChild(playerItem);
+    });
+    socket.emit('getCurrentPlayer', roomId);
 });
 
 socket.on('playerJoined', (message) => {
-  updateNotification(message);
-  // 通知目前輪到的玩家
-  socket.emit('getCurrentPlayer', roomId);
-});
-
-socket.on('playerLeft', (message) => {
-  updateNotification(message);
-  // 通知目前輪到的玩家
-  socket.emit('getCurrentPlayer', roomId);
+    console.log('Player joined:', message);
+    updateNotification(message);
+    socket.emit('getCurrentPlayer', roomId);
 });
 
 socket.on('nextPlayer', (nextPlayer) => {
-  updateNotification(`現在輪到 ${nextPlayer.name} 操作`);
+    updateNotification(`現在輪到 ${nextPlayer.name} 操作`);
 });
 
 function flipCard(index) {
@@ -191,14 +188,15 @@ function initializeBoard(board) {
   boardElement.style.gridTemplateColumns = `repeat(${boardSize}, 70px)`;
 
   board.forEach((value, index) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.id = `card-${index}`;
-    card.dataset.value = value;
-    card.onclick = () => flipCard(index);
-    boardElement.appendChild(card);
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = `card-${index}`;
+      card.dataset.value = value;
+      card.onclick = () => flipCard(index);
+      boardElement.appendChild(card);
   });
 }
+
 
 function checkGameOver() {
   const cards = document.querySelectorAll('.card');
