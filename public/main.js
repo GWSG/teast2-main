@@ -84,6 +84,12 @@ socket.on('playerJoined', (message) => {
     socket.emit('getCurrentPlayer', roomId);
 });
 
+socket.on('playerLeft', (message) => {
+    console.log('Player left:', message);
+    updateNotification(message);
+    socket.emit('getCurrentPlayer', roomId);
+});
+
 socket.on('nextPlayer', (nextPlayer) => {
     updateNotification(`現在輪到 ${nextPlayer.name} 操作`);
 });

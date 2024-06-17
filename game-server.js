@@ -30,7 +30,7 @@ io.on('connection', (socket) => {
         socket.emit('roomCreated', roomId);
         socket.emit('board', rooms[roomId].board);
         io.to(roomId).emit('updatePlayers', rooms[roomId].players.concat(rooms[roomId].spectators));
-        io.to(roomId).emit('playerJoined', `${playerName}已進入房間`);
+        io.to(roomId).emit('playerJoined', `${playerName} 已進入房間`);
         if (playerRole === 'participant') {
             io.to(roomId).emit('nextPlayer', rooms[roomId].players[rooms[roomId].currentPlayer]);
         }
@@ -61,10 +61,9 @@ io.on('connection', (socket) => {
             rooms[roomId].scores[socket.id] = 0;
 
             // 確保新加入的玩家接收棋盤和玩家列表
-            console.log('Sending board and players to new player');
             socket.emit('board', room.board); // 發送當前棋盤給新玩家
             io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators)); // 更新玩家列表
-            io.to(roomId).emit('playerJoined', `${playerName}已進入房間`);
+            io.to(roomId).emit('playerJoined', `${playerName} 已進入房間`);
 
             // 通知目前輪到的玩家
             io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
@@ -139,24 +138,30 @@ io.on('connection', (socket) => {
     socket.on('leaveRoom', (roomId) => {
         if (rooms[roomId]) {
             const room = rooms[roomId];
-            room.players = room.players.filter(player => player.id !== socket.id);
-            room.spectators = room.spectators.filter(spectator => spectator.id !== socket.id);
-            delete room.scores[socket.id];
+            const player = room.players.find(player => player.id === socket.id) || room.spectators.find(spectator => spectator.id === socket.id);
+            if (player) {
+                if (player.role === 'participant') {
+                    room.players = room.players.filter(p => p.id !== socket.id);
+                } else {
+                    room.spectators = room.spectators.filter(s => s.id !== socket.id);
+                }
+                delete room.scores[socket.id];
 
-            // 通知其他玩家
-            io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
-            io.to(roomId).emit('playerLeft', `${socket.id} 已離開房間`);
-            
-            // 讓離開的玩家離開房間
-            socket.leave(roomId);
-            socket.emit('roomClosed');
+                // 通知其他玩家
+                io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
+                io.to(roomId).emit('playerLeft', `${player.name} 已離開房間`);
+                
+                // 讓離開的玩家離開房間
+                socket.leave(roomId);
+                socket.emit('roomClosed');
 
-            // 如果房間沒有玩家，刪除房間
-            if (room.players.length === 0 && room.spectators.length === 0) {
-                delete rooms[roomId];
-            } else {
-                // 通知目前輪到的玩家
-                io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+                // 如果房間沒有玩家，刪除房間
+                if (room.players.length === 0 && room.spectators.length === 0) {
+                    delete rooms[roomId];
+                } else {
+                    // 通知目前輪到的玩家
+                    io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+                }
             }
         }
     });
@@ -165,25 +170,16 @@ io.on('connection', (socket) => {
         console.log('使用者已斷線');
         for (const roomId in rooms) {
             const room = rooms[roomId];
-            const index = room.players.findIndex(p => p.id === socket.id);
-            if (index !== -1) {
-                const player = room.players.splice(index, 1)[0];
-                delete room.scores[socket.id];
-                io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
-                io.to(roomId).emit('playerLeft', `${player.name}已離開房間`);
-                if (room.players.length === 0 && room.spectators.length === 0) {
-                    delete rooms[roomId];
+            const player = room.players.find(p => p.id === socket.id) || room.spectators.find(s => s.id === socket.id);
+            if (player) {
+                if (player.role === 'participant') {
+                    room.players = room.players.filter(p => p.id !== socket.id);
                 } else {
-                    io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
+                    room.spectators = room.spectators.filter(s => s.id !== socket.id);
                 }
-                break;
-            }
-            const spectatorIndex = room.spectators.findIndex(s => s.id === socket.id);
-            if (spectatorIndex !== -1) {
-                const spectator = room.spectators.splice(spectatorIndex, 1)[0];
                 delete room.scores[socket.id];
                 io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators));
-                io.to(roomId).emit('playerLeft', `${spectator.name}已離開房間`);
+                io.to(roomId).emit('playerLeft', `${player.name} 已離開房間`);
                 if (room.players.length === 0 && room.spectators.length === 0) {
                     delete rooms[roomId];
                 } else {
