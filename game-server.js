@@ -30,24 +30,22 @@ io.on('connection', (socket) => {
         socket.emit('roomCreated', roomId);
         socket.emit('board', rooms[roomId].board);
         io.to(roomId).emit('updatePlayers', rooms[roomId].players.concat(rooms[roomId].spectators));
-        io.to(roomId).emit('playerJoined', `${playerName} 已進入房間`);
+        io.to(roomId).emit('playerJoined', `${playerName} 已進入房間 (${playerRole === 'spectator' ? '觀戰者' : '參加者'})`);
         if (playerRole === 'participant') {
             io.to(roomId).emit('nextPlayer', rooms[roomId].players[rooms[roomId].currentPlayer]);
         }
     });
 
     socket.on('joinRoom', ({ roomId, playerName, playerRole }) => {
+        console.log(`加入房間請求: 房間ID: ${roomId}, 玩家名字: ${playerName}, 角色: ${playerRole}`);
         if (rooms[roomId]) {
             const room = rooms[roomId];
             const playerCount = room.players.length;
-            const spectatorCount = room.spectators.length;
+            console.log(`房間 ${roomId} 當前參加者數量: ${playerCount}`);
 
             if (playerRole === 'participant' && playerCount >= 2) {
                 socket.emit('roleFull', '參加者名額已滿');
-                return;
-            }
-            if (playerRole === 'spectator' && spectatorCount >= 2) {
-                socket.emit('roleFull', '觀戰者名額已滿');
+                console.log('參加者名額已滿');
                 return;
             }
 
@@ -63,12 +61,13 @@ io.on('connection', (socket) => {
             // 確保新加入的玩家接收棋盤和玩家列表
             socket.emit('board', room.board); // 發送當前棋盤給新玩家
             io.to(roomId).emit('updatePlayers', room.players.concat(room.spectators)); // 更新玩家列表
-            io.to(roomId).emit('playerJoined', `${playerName} 已進入房間`);
+            io.to(roomId).emit('playerJoined', `${playerName} 已進入房間 (${playerRole === 'spectator' ? '觀戰者' : '參加者'})`);
 
             // 通知目前輪到的玩家
             io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);
         } else {
             socket.emit('error', '找不到房間');
+            console.log('找不到房間');
         }
     });
 
@@ -158,6 +157,7 @@ io.on('connection', (socket) => {
                 // 如果房間沒有玩家，刪除房間
                 if (room.players.length === 0 && room.spectators.length === 0) {
                     delete rooms[roomId];
+                    console.log(`房間 ${roomId} 已刪除`);
                 } else {
                     // 通知目前輪到的玩家
                     io.to(roomId).emit('nextPlayer', room.players[room.currentPlayer]);

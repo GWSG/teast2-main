@@ -133,3 +133,8 @@ input, select {
   margin-top: 20px;
 }
 
+#chat-title {
+  text-align: left;
+  margin-top: 20px;
+  font-size: 1.5em;
+}

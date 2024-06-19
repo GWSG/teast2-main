@@ -29,11 +29,7 @@ function selectRole(role) {
 
 function createRoom() {
     const size = document.getElementById('board-size').value;
-    if (size === '16') {
-        document.querySelector('.rules').style.display = 'none'; // 隱藏遊戲規則
-    } else {
-        document.querySelector('.rules').style.display = 'block'; // 顯示遊戲規則
-    }
+    document.querySelector('.rules').style.display = (size === '16') ? 'none' : 'block';
     socket.emit('createRoom', { size, playerName, playerRole });
 }
 
@@ -51,23 +47,16 @@ function joinRoom() {
         alert('請輸入房間 ID 和玩家名字');
         return;
     }
-    const playerRole = 'participant'; // 或 'spectator'
     socket.emit('joinRoom', { roomId, playerName, playerRole });
 }
 
 socket.on('board', (board) => {
-    console.log('Board received:', board);
-    if (board.length === 256) {
-        document.querySelector('.rules').style.display = 'none';
-    } else {
-        document.querySelector('.rules').style.display = 'block';
-    }
+    document.querySelector('.rules').style.display = (board.length === 256) ? 'none' : 'block';
     initializeBoard(board);
-    document.getElementById('game').style.display = 'block'; // 顯示遊戲區域
+    document.getElementById('game').style.display = 'block';
 });
 
 socket.on('updatePlayers', (players) => {
-    console.log('Players updated:', players);
     const playersList = document.getElementById('players');
     playersList.innerHTML = '';
     players.forEach((player) => {
@@ -96,10 +85,7 @@ socket.on('nextPlayer', (nextPlayer) => {
 
 socket.on('receiveMessage', ({ name, message }) => {
     console.log(`接收到訊息: ${name}: ${message}`);
-    const chatElement = document.getElementById('chat');
-    const chatMessage = document.createElement('div');
-    chatMessage.textContent = `${name}: ${message}`;
-    chatElement.appendChild(chatMessage);
+    addChatMessage(`${name}: ${message}`);
 });
 
 function initializeBoard(board) {
@@ -140,19 +126,16 @@ socket.on('cardFlipped', (index, value) => {
     flippedCards.push({ index, value });
 
     if (flippedCards.length === 2) {
-        if (flippedCards[0].value === flippedCards[1].value) {
-            setTimeout(() => {
+        setTimeout(() => {
+            if (flippedCards[0].value === flippedCards[1].value) {
                 socket.emit('pairFound', roomId, flippedCards[0].index, flippedCards[1].index);
                 flippedCards = [];
                 checkGameOver();
-            }, 500); // 延遲以確保動畫完成
-        } else {
-            setTimeout(() => {
+            } else {
                 socket.emit('flipBack', roomId, flippedCards[0].index, flippedCards[1].index);
                 flippedCards = [];
-                socket.emit('nextPlayer', roomId);
-            }, 500); // 延遲以確保動畫完成
-        }
+            }
+        }, 500);
     }
 });
 
@@ -181,29 +164,25 @@ socket.on('gameOver', (scores) => {
         if (startTime && !endTime) {
             endTime = new Date();
             const elapsedTime = ((endTime - startTime) / 1000).toFixed(2);
-            const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n用時: ${elapsedTime} 秒\n是否還要再玩一局?`);
-            if (playAgain) {
+            if (confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n用時: ${elapsedTime} 秒\n是否還要再玩一局?`)) {
                 resetGame();
                 socket.emit('restartGame', roomId);
             } else {
-                // 發送退出房間請求
                 socket.emit('leaveRoom', roomId);
                 resetToInitialState();
                 alert('你已離開房間');
             }
         } else {
-            const playAgain = confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n是否還要再玩一局?`);
-            if (playAgain) {
+            if (confirm(`遊戲結束! 最終得分:\n${scores.map(score => `${score.name}: ${score.score}\n`).join('')}\n是否還要再玩一局?`)) {
                 resetGame();
                 socket.emit('restartGame', roomId);
             } else {
-                // 發送退出房間請求
                 socket.emit('leaveRoom', roomId);
                 resetToInitialState();
                 alert('你已離開房間');
             }
         }
-    }, 500); // 確保動畫完成後顯示結束訊息
+    }, 500);
 });
 
 socket.on('roomClosed', () => {
@@ -231,7 +210,7 @@ function resetToInitialState() {
     document.getElementById('role-selection').style.display = 'none';
     document.querySelector('.settings').style.display = 'block';
     document.getElementById('player-name').value = '';
-    document.getElementById('board-size').value = '2'; // 默認值
+    document.getElementById('board-size').value = '2';
     clearBoard();
     clearPlayerList();
     clearNotifications();
@@ -260,27 +239,28 @@ function clearChat() {
 
 function updateNotification(message) {
     const notificationsElement = document.getElementById('notifications');
-    notificationsElement.innerHTML = ''; // 清空通知欄
+    notificationsElement.innerHTML = '';
     const notification = document.createElement('div');
     notification.textContent = message;
     notificationsElement.appendChild(notification);
+}
+
+function addChatMessage(message) {
+    const chatElement = document.getElementById('chat');
+    const chatMessage = document.createElement('div');
+    chatMessage.textContent = message;
+    chatElement.appendChild(chatMessage);
 }
 
 function sendMessage() {
     const messageInput = document.getElementById('message-input');
     const message = messageInput.value;
     if (message) {
-        console.log(`發送訊息: 房間ID: ${roomId}, 訊息: ${message}`);
         socket.emit('sendMessage', { roomId, message });
         messageInput.value = '';
     }
 }
 
-// 確保只註冊一次事件處理器
 socket.off('receiveMessage').on('receiveMessage', ({ name, message }) => {
-    console.log(`接收到訊息: ${name}: ${message}`);
-    const chatElement = document.getElementById('chat');
-    const chatMessage = document.createElement('div');
-    chatMessage.textContent = `${name}: ${message}`;
-    chatElement.appendChild(chatMessage);
+    addChatMessage(`${name}: ${message}`);
 });
