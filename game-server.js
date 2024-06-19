@@ -42,11 +42,11 @@ io.on('connection', (socket) => {
             const playerCount = room.players.length;
             const spectatorCount = room.spectators.length;
 
-            if (playerRole === 'participant' && playerCount >= 2) {
+            if (playerRole === 'participant' && playerCount >= 2) { // 更改這裡的限制
                 socket.emit('roleFull', '參加者名額已滿');
                 return;
             }
-            if (playerRole === 'spectator' && spectatorCount >= 2) {
+            if (playerRole === 'spectator' && spectatorCount >= 2) { // 更改這裡的限制
                 socket.emit('roleFull', '觀戰者名額已滿');
                 return;
             }
@@ -89,7 +89,7 @@ io.on('connection', (socket) => {
 
             room.flippedCards = room.flippedCards || [];
 
-            if (room.flippedCards.length < 2) {
+            if (room.flippedCards.length < 3) {
                 room.flippedCards.push({ playerId: player.id, cardIndex });
                 io.to(roomId).emit('cardFlipped', cardIndex, room.board[cardIndex]);
 
