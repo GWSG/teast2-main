@@ -50,6 +50,10 @@ function joinRoom() {
     socket.emit('joinRoom', { roomId, playerName, playerRole });
 }
 
+socket.on('roleFull', (message) => {
+    alert(message);
+});
+
 socket.on('board', (board) => {
     document.querySelector('.rules').style.display = (board.length === 256) ? 'none' : 'block';
     initializeBoard(board);
