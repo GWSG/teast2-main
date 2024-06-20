@@ -1,171 +1,140 @@
 body {
   background: #0f0f0f;
-  /* 設置背景色為深黑色 */
   color: #fff;
-  /* 設置文字顏色為白色 */
   margin: 0;
-  /* 設置外邊距為0 */
   padding: 20px;
-  /* 設置內邊距為20px */
   font-family: Arial, sans-serif;
-  /* 設置字體為Arial，備選字體為sans-serif */
 }
 
 .title {
   font-size: 2em;
-  /* 設置字體大小為2em */
   text-align: center;
-  /* 設置文字對齊方式為居中 */
   margin-bottom: 20px;
-  /* 設置底部外邊距為20px */
 }
 
 .container {
   display: flex;
-  /* 設置為flex佈局 */
   flex-direction: column;
-  /* 設置flex方向為縱向 */
   justify-content: center;
-  /* 設置主軸對齊方式為居中 */
   align-items: center;
-  /* 設置交叉軸對齊方式為居中 */
 }
 
 @media (min-width: 768px) {
-  /* 當視窗寬度至少為768px時應用此樣式 */
   .container {
-    flex-direction: row;
-    /* 設置flex方向為橫向 */
+      flex-direction: row;
   }
 }
 
 .main-content {
   width: 100%;
-  /* 設置寬度為100% */
   max-width: 600px;
-  /* 設置最大寬度為600px */
   margin: 20px;
-  /* 設置所有方向的外邊距為20px */
 }
 
 .settings, #role-selection, #game {
   text-align: left;
-  /* 設置文字對齊方式為左對齊 */
 }
 
 label {
   margin: 10px 0 5px 0;
-  /* 設置外邊距，上方為10px，右方為0，下方為5px，左方為0 */
   display: block;
-  /* 設置顯示為區塊元素 */
 }
 
 input, select {
   padding: 10px;
-  /* 設置內邊距為10px */
   margin: 10px 0;
-  /* 設置上下外邊距為10px，左右為0 */
   width: 100%;
-  /* 設置寬度為100% */
   max-width: 300px;
-  /* 設置最大寬度為300px */
   border: none;
-  /* 移除邊框 */
   border-radius: 5px;
-  /* 設置邊框圓角為5px */
   background: rgba(255, 255, 255, 0.1);
-  /* 設置背景色為半透明的白色 */
   color: #53dfff;
-  /* 設置文字顏色為淺藍色 */
 }
 
 .btn {
   padding: 10px 20px;
-  /* 設置內邊距，上下為10px，左右為20px */
   margin: 10px;
-  /* 設置所有方向的外邊距為10px */
   border: none;
-  /* 移除邊框 */
   border-radius: 5px;
-  /* 設置邊框圓角為5px */
   background: #00ffff;
-  /* 設置背景色為青色 */
   color: #000;
-  /* 設置文字顏色為黑色 */
   cursor: pointer;
-  /* 設置鼠標樣式為指針 */
 }
 
 .join-room {
   display: flex;
-  /* 設置為flex佈局 */
 }
 
 .join-room input {
   margin-right: 10px;
-  /* 設置右邊外邊距為10px */
   flex: 1;
-  /* 設置flex比例為1，允許擴展 */
 }
 
 #board {
   display: grid;
-  /* 設置為grid佈局 */
   gap: 10px;
-  /* 設置網格間距為10px */
   grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  /* 設置網格列為自適應，最小寬度70px */
 }
 
 .card {
   width: 70px;
-  /* 設置寬度為70px */
   height: 70px;
-  /* 設置高度為70px */
   background-color: #f36363;
-  /* 設置背景色為紅色 */
   display: flex;
-  /* 設置為flex佈局 */
   align-items: center;
-  /* 設置交叉軸對齊方式為居中 */
   justify-content: center;
-  /* 設置主軸對齊方式為居中 */
   cursor: pointer;
-  /* 設置鼠標樣式為指針 */
   transition: transform 0.3s, background-color 0.3s;
-  /* 設置變換和背景顏色的過渡效果，持續時間0.3秒 */
 }
 
 .card.flipped {
   background-color: #789aff;
-  /* 設置翻開狀態的卡片背景色為藍色 */
 }
 
 .card.matched {
   background-color: #ffeb3b;
-  /* 設置配對成功狀態的卡片背景色為黃色 */
 }
 
 .hidden {
   display: none;
-  /* 隱藏元素 */
 }
 
 .rules {
   width: 100%;
-  /* 設置寬度為100% */
   max-width: 300px;
-  /* 設置最大寬度為300px */
   background: rgba(255, 255, 255, 0.1);
-  /* 設置背景色為半透明的白色 */
   padding: 20px;
-  /* 設置內邊距為20px */
   border-radius: 10px;
-  /* 設置邊框圓角為10px */
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-  /* 設置陰影效果 */
   text-align: left;
-  /* 設置文字對齊方式為左對齊 */
   margin: 20px;
-  /* 設置所有方向的外邊距為20px */
+}
+
+#chat {
+  margin-top: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+#message-input {
+  width: calc(100% - 80px);
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #53dfff;
+}
+
+#game {
+  margin-top: 20px;
+}
+
+#chat-title {
+  text-align: left;
+  margin-top: 20px;
+  font-size: 1.5em;
 }
